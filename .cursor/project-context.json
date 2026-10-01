@@ -1,0 +1,93 @@
+{
+  "projectId": "26SISIAR05LOG",
+  "projectName": "SAD-ILA — Sistema de Apoio ao Desenvolvimento de Material Didático",
+  "stages": {
+    "business": {
+      "status": "complete",
+      "artifacts": {
+        "product-vision": "business/product-vision.md",
+        "stakeholder-matrix": "business/stakeholder-matrix.md",
+        "business-requirements": "business/business-requirements.md",
+        "gap-analysis": "business/gap-analysis.md"
+      },
+      "completedAt": "2026-10-01T11:30:00-03:00"
+    },
+    "processes": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "requirements": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "architecture": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "technical": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "infrastructure": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "data": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "design": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "frontend": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "backend": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "code-review": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "security": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    },
+    "testing": {
+      "status": "pending",
+      "artifacts": {},
+      "completedAt": null
+    }
+  },
+  "metadata": {
+    "createdAt": "2026-10-01T11:30:00-03:00",
+    "lastModified": "2026-10-01T11:30:00-03:00",
+    "sources": [
+      "others_artifacts/visao-inicial.txt",
+      "others_artifacts/ila-missao-visao-valores.txt",
+      "others_artifacts/sad-ila-prototype 1.3.html",
+      "TODOs.md"
+    ],
+    "openGaps": [
+      "Autenticação institucional (SSO vs. local)",
+      "Provedor e política de dados para IA",
+      "Classificação de sigilo dos materiais",
+      "Processo as-is formal e baseline de métricas",
+      "Pasta legacy/ inexistente"
+    ]
+  }
+}

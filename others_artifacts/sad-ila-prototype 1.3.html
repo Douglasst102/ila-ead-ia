@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAD-ILA — Sistema de Apoio ao Desenvolvimento de Material Didático</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2B45;          /* azul aeronáutico profundo */
+    --ink-2:#2C4166;
+    --steel:#5B6B84;        /* cinza-azulado, texto secundário */
+    --steel-light:#8C99AD;
+    --paper:#F3F1EA;        /* papel institucional */
+    --paper-2:#EAE7DD;
+    --panel:#FFFFFF;
+    --line:#DAD5C6;
+    --gold:#A9832B;         /* dourado insígnia, uso comedido */
+    --gold-bg:#F4ECD8;
+    --green:#2E6B4C;
+    --green-bg:#E4EFE7;
+    --red:#A33B33;
+    --red-bg:#F5E5E2;
+    --blue:#2E5C8A;
+    --blue-bg:#E4EBF3;
+    --purple:#6A4E7C;
+    --purple-bg:#EDE5F1;
+    --teal:#2C6E6A;
+    --teal-bg:#E1EEED;
+    --radius:3px;
+    --serif:'Lora', Georgia, serif;
+    --sans:'IBM Plex Sans', -apple-system, sans-serif;
+    --mono:'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{display:flex;min-height:100vh;}
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar{
+    width:230px;
+    flex-shrink:0;
+    background:var(--ink);
+    color:#DCE3EE;
+    display:flex;
+    flex-direction:column;
+    padding:0;
+  }
+  .brand{
+    padding:22px 20px 18px 20px;
+    border-bottom:1px solid rgba(255,255,255,0.12);
+  }
+  .brand-mark{
+    font-family:var(--serif);
+    font-weight:700;
+    font-size:20px;
+    color:#fff;
+    letter-spacing:0.2px;
+  }
+  .brand-sub{
+    font-size:11.5px;
+    color:#9FB0C9;
+    margin-top:4px;
+    line-height:1.4;
+  }
+  .org-tag{
+    font-size:10.5px;
+    color:#7C8FAE;
+    margin-top:10px;
+    font-family:var(--mono);
+  }
+  nav.navlist{
+    padding:14px 10px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    flex:1;
+  }
+  .navitem{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 12px;
+    border-radius:var(--radius);
+    color:#B9C5D9;
+    font-size:14px;
+    cursor:pointer;
+    border-left:2px solid transparent;
+    background:transparent;
+  }
+  .navitem:hover{background:rgba(255,255,255,0.06);color:#fff;}
+  .navitem.active{
+    background:rgba(255,255,255,0.09);
+    color:#fff;
+    border-left:2px solid var(--gold);
+  }
+  .navitem .ic{width:16px;text-align:center;font-size:14px;opacity:0.9;}
+  .sidebar-foot{
+    padding:14px 20px 18px 20px;
+    border-top:1px solid rgba(255,255,255,0.12);
+    font-size:11px;
+    color:#7C8FAE;
+    line-height:1.5;
+  }
+
+  /* ---------- MAIN ---------- */
+  main.content{flex:1;display:flex;flex-direction:column;min-width:0;}
+  header.topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 30px;
+    border-bottom:1px solid var(--line);
+    background:var(--panel);
+  }
+  header.topbar h1{
+    font-family:var(--serif);
+    font-size:20px;
+    font-weight:600;
+    margin:0;
+    color:var(--ink);
+  }
+  .topbar-meta{font-size:12.5px;color:var(--steel);margin-top:3px;}
+  .user-chip{
+    display:flex;align-items:center;gap:8px;
+    font-size:13px;color:var(--steel);
+  }
+  .avatar{
+    width:30px;height:30px;border-radius:50%;
+    background:var(--gold-bg);color:var(--gold);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-weight:600;font-size:13px;
+    border:1px solid #E3D4A8;
+  }
+
+  .view{display:none;padding:28px 34px 60px 34px;max-width:1180px;}
+  .view.active{display:block;}
+
+  /* ---------- CARDS / SECTIONS ---------- */
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px 24px;
+    margin-bottom:20px;
+  }
+  .card h2{
+    font-family:var(--serif);
+    font-size:16.5px;
+    font-weight:600;
+    margin:0 0 4px 0;
+    color:var(--ink);
+  }
+  .card .hint{font-size:13px;color:var(--steel);margin:0 0 18px 0;}
+
+  label.field-label{
+    display:block;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--ink-2);
+    margin-bottom:6px;
+  }
+  select, input[type=text]{
+    width:100%;
+    padding:9px 11px;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:#fff;
+    font-family:var(--sans);
+    font-size:14px;
+    color:var(--ink);
+  }
+  .row{display:flex;gap:18px;}
+  .row > *{flex:1;}
+
+  .dropzone{
+    border:1.5px dashed #C7BFA6;
+    border-radius:var(--radius);
+    background:var(--paper-2);
+    padding:22px 18px;
+    text-align:center;
+    margin-top:6px;
+    transition:border-color .15s, background .15s;
+  }
+  .dropzone.filled{
+    border-style:solid;
+    border-color:var(--green);
+    background:var(--green-bg);
+  }
+  .dropzone .dz-icon{font-size:22px;margin-bottom:6px;display:block;}
+  .dropzone .dz-title{font-size:13.5px;color:var(--ink-2);font-weight:600;}
+  .dropzone .dz-sub{font-size:12px;color:var(--steel);margin-top:3px;}
+  .dropzone .dz-file{font-size:13px;color:var(--green);font-weight:600;margin-top:4px;}
+  .dz-btn{
+    margin-top:10px;
+    display:inline-block;
+    padding:6px 14px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--ink-2);
+    cursor:pointer;
+  }
+  .dz-btn:hover{border-color:var(--steel);}
+
+  .ref-list{margin-top:12px;text-align:left;}
+  .ref-item{
+    display:flex;justify-content:space-between;align-items:center;
+    background:#fff;border:1px solid #C5DBCC;border-radius:var(--radius);
+    padding:7px 12px;margin-bottom:6px;font-size:13px;color:var(--ink-2);
+  }
+  .ref-x{font-size:11.5px;color:var(--red);cursor:pointer;font-weight:600;}
+  .checklist{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px 24px;
+    margin-top:6px;
+  }
+  .checkitem{
+    display:flex;align-items:flex-start;gap:9px;
+    font-size:13.5px;color:var(--ink-2);
+    padding:6px 0;
+  }
+  .checkitem input{margin-top:3px;accent-color:var(--ink);}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:10px 20px;
+    border-radius:var(--radius);
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    border:1px solid transparent;
+  }
+  .btn-primary{background:var(--ink);color:#fff;}
+  .btn-primary:hover{background:var(--ink-2);}
+  .btn-primary:disabled{background:#B7BECB;cursor:not-allowed;}
+  .btn-ghost{background:#fff;border:1px solid var(--line);color:var(--ink-2);}
+  .btn-ghost:hover{border-color:var(--steel);}
+  .btn-accept{background:var(--green-bg);color:var(--green);border:1px solid #C5DBCC;}
+  .btn-accept:hover{background:#D8ECDE;}
+  .btn-reject{background:var(--red-bg);color:var(--red);border:1px solid #E4C7C2;}
+  .btn-reject:hover{background:#F0D8D3;}
+  .btn-edit{background:#fff;color:var(--ink-2);border:1px solid var(--line);}
+
+  /* ---------- REVIEW SCREEN ---------- */
+  .review-header{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-bottom:16px;
+  }
+  .review-header h1{font-family:var(--serif);font-size:19px;margin:0;}
+  .badge-count{
+    font-size:12.5px;color:var(--steel);
+    font-family:var(--mono);
+  }
+  .review-split{display:flex;gap:20px;align-items:flex-start;}
+  .doc-pane{
+    flex:1.15;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:26px 30px;
+    font-family:var(--serif);
+    font-size:15px;
+    line-height:1.85;
+    color:#2A2A28;
+    max-height:560px;
+    overflow-y:auto;
+  }
+  .doc-pane p{margin:0 0 16px 0;}
+  .hl{
+    background:var(--gold-bg);
+    border-bottom:2px solid var(--gold);
+    padding:1px 2px;
+    cursor:pointer;
+  }
+  .hl.hl-active{background:#EEDDA6;}
+
+  .suggest-pane{
+    flex:1;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:22px 24px;
+    position:sticky;
+    top:20px;
+  }
+  .tag{
+    display:inline-block;
+    font-size:11px;
+    font-weight:600;
+    padding:3px 9px;
+    border-radius:20px;
+    margin-bottom:14px;
+  }
+  .tag-correcao{background:var(--red-bg);color:var(--red);}
+  .tag-melhoria{background:var(--gold-bg);color:var(--gold);}
+  .tag-pedagogica{background:var(--blue-bg);color:var(--blue);}
+  .tag-conteudo{background:var(--purple-bg);color:var(--purple);}
+  .tag-hierarquia{background:var(--teal-bg);color:var(--teal);}
+
+  .sugg-block-label{
+    font-size:10.5px;font-weight:700;color:var(--steel);
+    text-transform:uppercase;letter-spacing:0.06em;
+    margin-bottom:5px;
+  }
+  .sugg-original{
+    font-size:13.5px;color:var(--steel);
+    background:var(--paper-2);
+    border-radius:var(--radius);
+    padding:10px 12px;
+    margin-bottom:14px;
+    line-height:1.55;
+    text-decoration:line-through;
+    text-decoration-color:#C3927E;
+  }
+  .sugg-new{
+    font-size:13.5px;color:var(--ink);
+    background:var(--green-bg);
+    border-radius:var(--radius);
+    padding:10px 12px;
+    margin-bottom:14px;
+    line-height:1.55;
+  }
+  .sugg-new textarea{
+    width:100%;border:1px solid #C5DBCC;background:#fff;
+    border-radius:var(--radius);padding:8px;font-family:var(--sans);
+    font-size:13.5px;line-height:1.5;resize:vertical;min-height:60px;
+  }
+  .sugg-reason{
+    font-size:12.5px;color:var(--steel);
+    margin-bottom:18px;
+    line-height:1.5;
+  }
+  .sugg-actions{display:flex;gap:8px;margin-bottom:14px;}
+  .sugg-actions button{flex:1;justify-content:center;padding:8px 10px;font-size:13px;}
+  .sugg-nav{
+    display:flex;justify-content:space-between;align-items:center;
+    border-top:1px solid var(--line);
+    padding-top:14px;
+    font-size:12.5px;color:var(--steel);
+  }
+  .sugg-nav button{background:none;border:none;color:var(--ink-2);font-weight:600;font-size:13px;cursor:pointer;}
+  .sugg-nav button:disabled{color:var(--steel-light);cursor:not-allowed;}
+  .sugg-status{
+    font-size:12px;font-weight:600;margin-bottom:12px;
+  }
+  .status-pending{color:var(--steel);}
+  .status-accepted{color:var(--green);}
+  .status-rejected{color:var(--red);}
+
+  .finish-banner{
+    text-align:center;padding:30px 20px;
+  }
+  .finish-banner .big{font-family:var(--serif);font-size:18px;margin-bottom:6px;}
+
+  /* ---------- QE SCREEN ---------- */
+  .qe-summary{display:flex;gap:14px;margin-bottom:22px;}
+  .qe-stat{
+    flex:1;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px 18px;
+  }
+  .qe-stat .n{font-family:var(--serif);font-size:26px;font-weight:600;}
+  .qe-stat .l{font-size:12px;color:var(--steel);margin-top:2px;}
+  .qe-stat.ok .n{color:var(--green);}
+  .qe-stat.warn .n{color:var(--gold);}
+  .qe-stat.bad .n{color:var(--red);}
+
+  table.qe-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  table.qe-table th{
+    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;
+    color:var(--steel);font-weight:700;padding:10px 12px;border-bottom:1px solid var(--line);
+  }
+  table.qe-table td{padding:12px;border-bottom:1px solid var(--paper-2);vertical-align:top;}
+  table.qe-table tr.qerow{cursor:pointer;}
+  table.qe-table tr.qerow:hover{background:var(--paper-2);}
+  table.qe-table tr.qerow.selected{background:var(--blue-bg);}
+  .status-pill{
+    display:inline-flex;align-items:center;gap:5px;
+    font-size:12px;font-weight:600;padding:2px 9px;border-radius:20px;
+  }
+  .pill-ok{background:var(--green-bg);color:var(--green);}
+  .pill-warn{background:var(--gold-bg);color:var(--gold);}
+  .pill-bad{background:var(--red-bg);color:var(--red);}
+
+  .qe-detail{
+    margin-top:18px;
+    background:var(--paper-2);
+    border-left:3px solid var(--gold);
+    border-radius:var(--radius);
+    padding:16px 20px;
+    font-size:13.5px;
+    color:var(--ink-2);
+    line-height:1.6;
+  }
+  .qe-detail .qd-title{font-weight:700;margin-bottom:6px;}
+
+  /* ---------- REPORT SCREEN ---------- */
+  table.report-table{width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px;}
+  table.report-table td{padding:11px 4px;border-bottom:1px solid var(--paper-2);}
+  table.report-table td.val{text-align:right;font-family:var(--serif);font-weight:600;font-size:15px;}
+  .download-row{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;}
+
+  .flow-note{
+    font-size:12.5px;color:var(--steel);
+    background:var(--paper-2);
+    border-radius:var(--radius);
+    padding:12px 16px;
+    margin-top:18px;
+    line-height:1.6;
+  }
+  .flow-note b{color:var(--ink-2);}
+
+  @media (max-width:900px){
+    .review-split{flex-direction:column;}
+    .suggest-pane{position:static;}
+    .checklist{grid-template-columns:1fr;}
+    .row{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">SAD-ILA</div>
+      <div class="brand-sub">Sistema de Apoio ao Desenvolvimento<br>de Material Didático</div>
+      <div class="org-tag">COMGAP / ILA · 26SISIAR05LOG</div>
+    </div>
+    <nav class="navlist">
+      <div class="navitem active" data-view="v-inicio"><span class="ic">&#9633;</span> Início</div>
+      <div class="navitem" data-view="v-inicio"><span class="ic">&#9633;</span> Materiais</div>
+      <div class="navitem" data-view="v-revisao"><span class="ic">&#9998;</span> Revisão com IA</div>
+      <div class="navitem" data-view="v-qe"><span class="ic">&#9776;</span> Conferência do QE</div>
+      <div class="navitem" data-view="v-relatorio"><span class="ic">&#9744;</span> Relatórios</div>
+      <div class="navitem" data-view="v-inicio"><span class="ic">&#8635;</span> Histórico</div>
+    </nav>
+    <div class="sidebar-foot">
+      Protótipo funcional — v0.1<br>
+      Seção de Material Didático · ILA
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="content">
+    <header class="topbar">
+      <div>
+        <h1 id="topbar-title">Revisão de material didático</h1>
+        <div class="topbar-meta" id="topbar-meta">Novo processo de revisão</div>
+      </div>
+      <div class="user-chip">
+        <div class="avatar">EC</div>
+        <span>1S BEI Edilaine Santos</span>
+      </div>
+    </header>
+
+    <!-- ===================== VIEW: INÍCIO / UPLOAD ===================== -->
+    <section class="view active" id="v-inicio">
+      <div class="card">
+        <h2>Selecionar curso</h2>
+        <p class="hint">Escolha o curso ao qual o material didático pertence.</p>
+        <div class="row">
+          <div>
+            <label class="field-label">Curso</label>
+            <select id="curso-select">
+              <option>CFACC-MB — Curso de Fiscalização, Acompanhamento e Controle de Contratos – Módulo Básico</option>
+              <option>CECAMP-MB — Curso de Engenharia de Campanha – Módulo Básico</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Módulo / Unidade</label>
+            <select>
+              <option>Unidade 3 — Fiscalização e Acompanhamento Contratual</option>
+              <option>Unidade 1 — Fundamentos</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Documentos</h2>
+        <p class="hint">Envie o Quadro Estrutural (QE) do curso e o material didático correspondente, em formato Word.</p>
+        <div class="row">
+          <div class="dropzone filled" id="dz-qe">
+            <span class="dz-icon">&#128196;</span>
+            <div class="dz-title">Quadro Estrutural (QE)</div>
+            <div class="dz-sub">Arraste o arquivo ou selecione manualmente</div>
+            <div class="dz-file">QE_CFACC-MB_2026.docx</div>
+            <div class="dz-btn">Substituir arquivo</div>
+          </div>
+          <div class="dropzone filled" id="dz-material">
+            <span class="dz-icon">&#128196;</span>
+            <div class="dz-title">Material didático</div>
+            <div class="dz-sub">Arraste o arquivo ou selecione manualmente</div>
+            <div class="dz-file">Apostila_Fiscalizacao_Unid3.docx</div>
+            <div class="dz-btn">Substituir arquivo</div>
+          </div>
+        </div>
+        <p class="hint" style="margin:18px 0 0 0;">Referências técnicas (normas, manuais, legislação) serão confrontadas com o material didático e com o QE para verificar a conformidade técnica do conteúdo. É possível enviar mais de um arquivo.</p>
+                <div class="dropzone filled" id="dz-ref">
+          <span class="dz-icon">&#128218;</span>
+          <div class="dz-title">Referências Técnicas</div>
+          <div class="dz-sub">Arraste os arquivos ou selecione manualmente (PDF, Word)</div>
+          <div class="ref-list">
+            <div class="ref-item"><span>&#128196; Manual_Fiscalizacao_Contratos.pdf</span><span class="ref-x">remover</span></div>
+            <div class="ref-item"><span>&#128196; Norma_Acompanhamento_Contratual.pdf</span><span class="ref-x">remover</span></div>
+            <div class="ref-item"><span>&#128196; Legislacao_Contratos_Administrativos.pdf</span><span class="ref-x">remover</span></div>
+          </div>
+          <div class="dz-btn">+ Adicionar arquivos</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>O que deseja analisar?</h2>
+        <p class="hint">A IA apresentará sugestões; nenhuma alteração é aplicada automaticamente ao documento.</p>
+        <div class="checklist">
+          <label class="checkitem"><input type="checkbox" checked> Correção ortográfica e gramatical</label>
+          <label class="checkitem"><input type="checkbox" checked> Coerência e coesão textual</label>
+          <label class="checkitem"><input type="checkbox" checked> Linguagem dialógica</label>
+          <label class="checkitem"><input type="checkbox" checked> Linguagem didático-pedagógica</label>
+          <label class="checkitem"><input type="checkbox" checked> Consistência terminológica</label>
+          <label class="checkitem"><input type="checkbox" checked> Subordinação hierárquica do conteúdo (primária, secundária, terciária...) conforme o QE</label>
+          <label class="checkitem"><input type="checkbox" checked> Conferência com o Quadro Estrutural (QE)</label>
+          <label class="checkitem"><input type="checkbox" checked> Revisão Técnica</label>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="goTo('v-revisao')">Iniciar revisão &#8594;</button>
+    </section>
+
+    <!-- ===================== VIEW: REVISÃO ===================== -->
+    <section class="view" id="v-revisao">
+      <div class="review-header">
+        <h1>Revisão — CFACC-MB, Unidade 3</h1>
+        <div class="badge-count" id="rev-progress">Sugestão 1 de 5</div>
+      </div>
+
+      <div class="review-split">
+        <div class="doc-pane" id="doc-pane">
+          <p>O presente capítulo trata dos <span class="hl" data-i="0">procedimentos afetos à fiscalização contratual</span>, elemento essencial para o correto acompanhamento da execução dos contratos administrativos no âmbito do COMAER.</p>
+          <p><span class="hl" data-i="1">O objetivo desta atividade é possibilitar ao aluno compreender os procedimentos necessários para a designação do fiscal de contrato.</span> Tal designação deve observar os critérios técnicos e legais pertinentes.</p>
+          <p>A fiscalização contratual compreende o acompanhamento sistemático da execução do objeto contratado, <span class="hl" data-i="2">de forma a verificar se o mesmo esta sendo cumprido de acordo com o estabelecido no instrumento contratual</span>, cabendo ao fiscal registrar as ocorrências relevantes.</p>
+          <p>Cabe ressaltar que o fiscal de contrato não se confunde com o gestor do contrato, <span class="hl" data-i="3">sendo suas atribuições complementares e não substituíveis entre si.</span></p>
+          <p><span class="hl" data-i="4">O aluno deverá, ao final desta unidade, ser capaz de elaborar relatórios de fiscalização contratual, identificando eventuais penalidades cabíveis.</span></p>
+          <p><span class="hl" data-i="5">O distrato contratual ocorre quando as partes decidem, de comum acordo, encerrar antecipadamente o contrato, devendo ser formalizado por instrumento próprio e devidamente registrado nos autos do processo.</span></p>
+        </div>
+
+        <div class="suggest-pane" id="suggest-pane"><!-- filled by JS --></div>
+      </div>
+    </section>
+
+    <!-- ===================== VIEW: QE ===================== -->
+    <section class="view" id="v-qe">
+      <div class="review-header">
+        <h1>Conferência do Quadro Estrutural</h1>
+        <div class="badge-count">CFACC-MB · Unidade 3</div>
+      </div>
+
+      <div class="qe-summary">
+        <div class="qe-stat ok"><div class="n">32</div><div class="l">Conteúdos identificados</div></div>
+        <div class="qe-stat warn"><div class="n">3</div><div class="l">Cobertura parcial</div></div>
+        <div class="qe-stat bad"><div class="n">2</div><div class="l">Não localizados</div></div>
+        <div class="qe-stat warn"><div class="n">4</div><div class="l">Divergências de hierarquia</div></div>
+      </div>
+
+      <div class="card">
+        <h2>Correspondência QE &#8596; material didático</h2>
+        <p class="hint">Selecione um item para ver o detalhamento identificado pela IA, incluindo a verificação de subordinação (nível hierárquico previsto no QE x nível identificado no material).</p>
+        <table class="qe-table">
+          <thead>
+            <tr><th>Item</th><th>Conteúdo previsto no QE</th><th>Nível no QE</th><th>Localização</th><th>Nível no material</th><th>Situação</th></tr>
+          </thead>
+          <tbody id="qe-tbody"><!-- filled by JS --></tbody>
+        </table>
+        <div class="qe-detail" id="qe-detail" style="display:none;"></div>
+      </div>
+
+      <button class="btn btn-primary" onclick="goTo('v-relatorio')">Gerar relatório de conferência &#8594;</button>
+    </section>
+
+    <!-- ===================== VIEW: RELATÓRIO ===================== -->
+    <section class="view" id="v-relatorio">
+      <div class="review-header">
+        <h1>Relatório final da revisão</h1>
+        <div class="badge-count">CFACC-MB · Unidade 3</div>
+      </div>
+
+      <div class="card">
+        <h2>Resumo da revisão textual</h2>
+        <table class="report-table">
+          <tr><td>Sugestões apresentadas pela IA</td><td class="val">5</td></tr>
+          <tr><td>Alterações aceitas pelo revisor</td><td class="val" id="rep-accepted">—</td></tr>
+          <tr><td>Alterações recusadas pelo revisor</td><td class="val" id="rep-rejected">—</td></tr>
+          <tr><td>Alterações editadas antes do aceite</td><td class="val" id="rep-edited">—</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Resumo da conferência do QE</h2>
+        <table class="report-table">
+          <tr><td>Conteúdos previstos no QE</td><td class="val">37</td></tr>
+          <tr><td>Conteúdos contemplados no material</td><td class="val">32</td></tr>
+          <tr><td>Cobertura parcial</td><td class="val">3</td></tr>
+          <tr><td>Não localizados</td><td class="val">2</td></tr>
+          <tr><td>Divergências de subordinação (hierarquia)</td><td class="val">4</td></tr>
+          <tr><td>Divergências de hierarquia já corrigidas na revisão</td><td class="val" id="rep-hier-fixed">—</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Saídas do processo</h2>
+        <p class="hint">O documento original é preservado; a versão final contém somente as alterações aprovadas pelo revisor.</p>
+        <div class="download-row">
+          <button class="btn btn-ghost">&#8595; Baixar material revisado (.docx)</button>
+          <button class="btn btn-ghost">&#8595; Baixar relatório de revisão (.pdf)</button>
+          <button class="btn btn-ghost">&#8595; Baixar relatório de conferência do QE (.pdf)</button>
+        </div>
+        <div class="flow-note">
+          <b>Rastreabilidade:</b> arquivo original, sugestões, decisões do revisor e versão final ficam registrados no histórico do processo, com data e responsável pela revisão.
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+  // ---------- NAVIGATION ----------
+  const titles = {
+    'v-inicio': ['Revisão de material didático', 'Novo processo de revisão'],
+    'v-revisao': ['Revisão com IA', 'Sugestões da IA — decisão do revisor pendente'],
+    'v-qe': ['Conferência do Quadro Estrutural', 'Verificação de aderência do material ao QE'],
+    'v-relatorio': ['Relatório final', 'Consolidação da revisão e da conferência do QE']
+  };
+  function goTo(id){
+    document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    document.querySelectorAll('.navitem').forEach(n=>n.classList.toggle('active', n.dataset.view===id));
+    document.getElementById('topbar-title').textContent = titles[id][0];
+    document.getElementById('topbar-meta').textContent = titles[id][1];
+  }
+  document.querySelectorAll('.navitem').forEach(item=>{
+    item.addEventListener('click', ()=>goTo(item.dataset.view));
+  });
+
+  // ---------- REVIEW SCREEN LOGIC ----------
+  const suggestions = [
+    {
+      tag:'pedagogica', tagLabel:'Adequação pedagógica',
+      original:'O presente capítulo trata dos procedimentos afetos à fiscalização contratual...',
+      suggested:'Neste capítulo, você vai conhecer os procedimentos de fiscalização contratual...',
+      reason:'Aproximação da linguagem ao aluno, adotando abordagem mais dialógica sem alterar o conteúdo técnico.'
+    },
+    {
+      tag:'melhoria', tagLabel:'Sugestão de melhoria',
+      original:'O objetivo desta atividade é possibilitar ao aluno compreender os procedimentos necessários para a designação do fiscal de contrato.',
+      suggested:'Nesta atividade, você compreenderá os procedimentos necessários para a designação do fiscal de contrato.',
+      reason:'Frase reescrita em construção mais direta, mantendo o sentido original.'
+    },
+    {
+      tag:'correcao', tagLabel:'Correção necessária',
+      original:'de forma a verificar se o mesmo esta sendo cumprido de acordo com o estabelecido no instrumento contratual',
+      suggested:'de forma a verificar se o objeto está sendo cumprido de acordo com o estabelecido no instrumento contratual',
+      reason:'Ausência de acentuação em "está" e uso impreciso de "o mesmo" como referência anafórica.'
+    },
+    {
+      tag:'melhoria', tagLabel:'Sugestão de melhoria',
+      original:'sendo suas atribuições complementares e não substituíveis entre si.',
+      suggested:'suas atribuições são complementares, e não substituíveis entre si.',
+      reason:'Ajuste de pontuação e clareza na coordenação da frase.'
+    },
+    {
+      tag:'conteudo', tagLabel:'Atenção ao conteúdo técnico',
+      original:'O aluno deverá, ao final desta unidade, ser capaz de elaborar relatórios de fiscalização contratual, identificando eventuais penalidades cabíveis.',
+      suggested:'(sem alteração de texto sugerida)',
+      reason:'O tema "penalidades" consta no Quadro Estrutural, mas não foi localizado de forma desenvolvida no restante da apostila. Recomenda-se validação do especialista quanto à cobertura do conteúdo.'
+    },
+    {
+      tag:'hierarquia', tagLabel:'Ajuste de hierarquia',
+      original:'O distrato contratual ocorre quando as partes decidem, de comum acordo, encerrar antecipadamente o contrato, devendo ser formalizado por instrumento próprio e devidamente registrado nos autos do processo.',
+      suggested:'<b>3.4 Distrato contratual</b> (subordinado a "3. Encerramento e distrato contratual")<br><br>O distrato contratual ocorre quando as partes decidem, de comum acordo, encerrar antecipadamente o contrato, devendo ser formalizado por instrumento próprio e devidamente registrado nos autos do processo.',
+      reason:'No QE, "Distrato contratual" está previsto como subtópico secundário (nível 2) do tema "Encerramento contratual". No material, o conteúdo aparece como parágrafo corrido, sem marcação de subtítulo, ficando hierarquicamente no mesmo nível do texto introdutório. Sugere-se inserir como subtítulo de nível 2, subordinado ao tópico correspondente, para refletir a estrutura prevista no QE.'
+    }
+  ];
+  let current = 0;
+  const state = suggestions.map(()=>({status:'pending', editedText:null, editing:false}));
+
+  function renderSuggestion(){
+    const pane = document.getElementById('suggest-pane');
+    document.getElementById('rev-progress').textContent = `Sugestão ${current+1} de ${suggestions.length}`;
+
+    // highlight doc
+    document.querySelectorAll('.hl').forEach(h=>h.classList.remove('hl-active'));
+    const activeHl = document.querySelector(`.hl[data-i="${current}"]`);
+    if(activeHl){ activeHl.classList.add('hl-active'); activeHl.scrollIntoView({block:'center', behavior:'smooth'}); }
+
+    if(current >= suggestions.length){
+      pane.innerHTML = `
+        <div class="finish-banner">
+          <div class="big">Revisão concluída</div>
+          <p style="color:var(--steel);font-size:13.5px;">Todas as sugestões foram avaliadas. Você pode gerar a versão final revisada.</p>
+          <button class="btn btn-primary" onclick="goTo('v-qe')">Ir para conferência do QE &#8594;</button>
+        </div>`;
+      return;
+    }
+
+    const s = suggestions[current];
+    const st = state[current];
+    const statusText = {pending:'Aguardando decisão', accepted:'Alteração aceita', rejected:'Alteração recusada'}[st.status];
+    const statusClass = {pending:'status-pending', accepted:'status-accepted', rejected:'status-rejected'}[st.status];
+
+    let newBlock;
+    if(st.editing){
+      newBlock = `<textarea id="edit-area">${st.editedText ?? s.suggested}</textarea>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button class="btn btn-accept" onclick="saveEdit()">Salvar edição</button>
+          <button class="btn btn-ghost" onclick="cancelEdit()">Cancelar</button>
+        </div>`;
+    } else {
+      newBlock = `<div class="sugg-new">${st.editedText ?? s.suggested}</div>`;
+    }
+
+    pane.innerHTML = `
+      <span class="tag tag-${s.tag}">${s.tagLabel}</span>
+      <div class="sugg-status ${statusClass}">${statusText}</div>
+
+      <div class="sugg-block-label">Texto original</div>
+      <div class="sugg-original">${s.original}</div>
+
+      <div class="sugg-block-label">Sugestão da IA</div>
+      ${newBlock}
+
+      <div class="sugg-block-label">Motivo da sugestão</div>
+      <div class="sugg-reason">${s.reason}</div>
+
+      ${st.editing ? '' : `
+      <div class="sugg-actions">
+        <button class="btn btn-accept" onclick="decide('accepted')">&#10003; Aceitar</button>
+        <button class="btn btn-reject" onclick="decide('rejected')">&#10005; Recusar</button>
+        <button class="btn btn-edit" onclick="startEdit()">&#9998; Editar</button>
+      </div>`}
+
+      <div class="sugg-nav">
+        <button onclick="prevSuggestion()" ${current===0?'disabled':''}>&#8592; Anterior</button>
+        <span>${current+1} / ${suggestions.length}</span>
+        <button onclick="nextSuggestion()">Próxima &#8594;</button>
+      </div>
+    `;
+  }
+  function decide(val){ state[current].status = val; renderSuggestion(); }
+  function startEdit(){ state[current].editing = true; renderSuggestion(); }
+  function cancelEdit(){ state[current].editing = false; renderSuggestion(); }
+  function saveEdit(){
+    const val = document.getElementById('edit-area').value;
+    state[current].editedText = val;
+    state[current].editing = false;
+    state[current].status = 'accepted';
+    renderSuggestion();
+  }
+  function nextSuggestion(){ if(current < suggestions.length){ current++; renderSuggestion(); } }
+  function prevSuggestion(){ if(current > 0){ current--; renderSuggestion(); } }
+  renderSuggestion();
+
+  // update report counts whenever navigating to report
+  document.querySelector('.navitem[data-view="v-relatorio"]').addEventListener('click', updateReport);
+  function updateReport(){
+    const accepted = state.filter(s=>s.status==='accepted' && s.editedText===null).length;
+    const edited = state.filter(s=>s.status==='accepted' && s.editedText!==null).length;
+    const rejected = state.filter(s=>s.status==='rejected').length;
+    const hierFixed = state.filter((s,i)=>s.status==='accepted' && suggestions[i].tag==='hierarquia').length;
+    document.getElementById('rep-accepted').textContent = accepted;
+    document.getElementById('rep-edited').textContent = edited;
+    document.getElementById('rep-rejected').textContent = rejected;
+    document.getElementById('rep-hier-fixed').textContent = hierFixed;
+  }
+
+  // ---------- QE SCREEN LOGIC ----------
+  const qeItems = [
+    {id:'01', desc:'Conceito de fiscalização contratual', nivelQE:'1 · Primário', loc:'Cap. 1, p. 5', nivelMat:'1 · Primário', hier:'ok', status:'ok',
+      detail:'O conceito foi identificado de forma completa no capítulo introdutório, com definição alinhada ao previsto no QE. A subordinação também está correta: o conteúdo aparece como tópico primário, assim como definido no QE.'},
+    {id:'02', desc:'Designação do fiscal de contrato', nivelQE:'1.1 · Secundário', loc:'Cap. 1, p. 6', nivelMat:'1.1 · Secundário', hier:'ok', status:'ok',
+      detail:'Conteúdo localizado e desenvolvido de forma compatível com o previsto no Quadro Estrutural, inclusive quanto ao nível de subordinação (subtítulo secundário sob "Conceito de fiscalização contratual").'},
+    {id:'03', desc:'Distinção entre fiscal e gestor do contrato', nivelQE:'1.2 · Secundário', loc:'Cap. 1, p. 7', nivelMat:'— · Sem marcação', hier:'divergente', status:'ok',
+      detail:'Conteúdo presente e coerente com a definição do QE, porém redigido dentro do mesmo parágrafo do item anterior, sem marcação de subtítulo. O QE prevê este tema como subtópico secundário independente (1.2). Sugestão: destacar como subtítulo próprio, subordinado ao tópico "Conceito de fiscalização contratual".'},
+    {id:'04', desc:'Gestão de riscos na execução contratual', nivelQE:'2.1 · Secundário', loc:'Cap. 2, p. 14', nivelMat:'2.1 · Secundário', hier:'ok', status:'warn',
+      detail:'O conteúdo foi localizado no nível hierárquico correto, porém aborda apenas identificação de riscos. O QE prevê também tratamento e resposta a riscos, elementos não identificados no material. Sugestão: verificar a necessidade de complementação com o especialista responsável.'},
+    {id:'05', desc:'Penalidades contratuais', nivelQE:'2.2 · Secundário', loc:'Não localizado', nivelMat:'—', hier:'n/a', status:'bad',
+      detail:'Não foram identificados trechos que tratem especificamente de penalidades contratuais, embora o item conste no QE como subtópico secundário obrigatório da unidade. Recomenda-se validação junto ao instrutor responsável quanto ao conteúdo e, uma vez inserido, atenção à subordinação (nível 2.2).'},
+    {id:'06', desc:'Elaboração de relatórios de fiscalização', nivelQE:'2.3.1 · Terciário', loc:'Cap. 3, p. 21', nivelMat:'3 · Primário', hier:'divergente', status:'warn',
+      detail:'O material apresenta um modelo de relatório, mas não descreve o passo a passo de elaboração previsto no QE. Além disso, o conteúdo foi estruturado como tópico primário (capítulo próprio), enquanto o QE o prevê como subtópico terciário, subordinado a "Gestão de riscos". Sugestão: reorganizar o conteúdo sob a hierarquia prevista, além de complementar a descrição do procedimento.'},
+    {id:'07', desc:'Encerramento e distrato contratual', nivelQE:'3 · Primário', loc:'Cap. 4, p. 30', nivelMat:'3 · Primário', hier:'ok', status:'ok',
+      detail:'Tópico primário identificado e corretamente posicionado na estrutura do material.'},
+    {id:'08', desc:'Distrato contratual', nivelQE:'3.4 · Secundário', loc:'Cap. 4, p. 31', nivelMat:'— · Sem marcação', hier:'divergente', status:'warn',
+      detail:'O conteúdo foi localizado, mas redigido como parágrafo corrido dentro do texto de "Encerramento contratual", sem marcação de subtítulo. O QE prevê este tema como subtópico secundário (3.4), subordinado ao tópico "Encerramento e distrato contratual". Ver também a sugestão correspondente na tela de Revisão com IA.'}
+  ];
+  const pillMap = {ok:['pill-ok','Contemplado'], warn:['pill-warn','Parcial'], bad:['pill-bad','Não localizado']};
+  const hierPillMap = {ok:['pill-ok','Hierarquia OK'], divergente:['pill-warn','Hierarquia divergente'], 'n/a':['pill-bad','Não aplicável']};
+  function renderQe(){
+    const tbody = document.getElementById('qe-tbody');
+    tbody.innerHTML = qeItems.map((it,i)=>{
+      const [cls,label] = pillMap[it.status];
+      const [hcls,hlabel] = hierPillMap[it.hier];
+      return `<tr class="qerow" data-i="${i}">
+        <td>${it.id}</td>
+        <td>${it.desc}</td>
+        <td>${it.nivelQE}</td>
+        <td>${it.loc}</td>
+        <td>${it.nivelMat}</td>
+        <td>
+          <span class="status-pill ${cls}">${label}</span><br>
+          <span class="status-pill ${hcls}" style="margin-top:5px;">${hlabel}</span>
+        </td>
+      </tr>`;
+    }).join('');
+    tbody.querySelectorAll('tr').forEach(row=>{
+      row.addEventListener('click', ()=>{
+        tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('selected'));
+        row.classList.add('selected');
+        const it = qeItems[row.dataset.i];
+        const [,label] = pillMap[it.status];
+        const [,hlabel] = hierPillMap[it.hier];
+        const box = document.getElementById('qe-detail');
+        box.style.display = 'block';
+        box.innerHTML = `<div class="qd-title">${it.desc} — ${label} · ${hlabel}</div>${it.detail}`;
+      });
+    });
+  }
+  renderQe();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1b8202b4c52841139206ef3f9fe0d27e","spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>

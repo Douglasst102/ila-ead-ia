@@ -1,0 +1,10 @@
+---
+alwaysApply: true
+---
+# Ambiente
+
+- Estamos em um ambiente Windows.
+- A aplicação roda em containers, usando Docker Desktop.
+- Sempre que precisar de recompilar ou instalar alguma coisa (npm, npx...) execute no respectivo container.
+- Sempre que precisar fazer alterações ou consultas nos databases lembre que estão em containers.
+- Quando fizer alterações críticas nos containers lembre de persistí-las no docker-compose ou dockerfile caso necessário.
