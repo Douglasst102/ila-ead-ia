@@ -1,0 +1,173 @@
+# Desenvolvimento SAD-ILA — na raiz do repositório:
+#   docker compose up -d --build
+# (ou: docker compose -f infrastructure/docker-compose.dev.yml --env-file .env up -d --build)
+# Ollama (opcional): adicionar --profile ai
+
+name: sad-ila
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sad-ila-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sadila}
+      POSTGRES_USER: ${POSTGRES_USER:-sadila}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../data/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sadila} -d ${POSTGRES_DB:-sadila}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  # S3 API — produção: MinIO (ADR-005). Dev fallback: CloudServer quando pull minio/minio falhar no Hub.
+  minio:
+    image: zenko/cloudserver:latest
+    container_name: sad-ila-minio
+    environment:
+      SCALITY_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-sadila-minio}
+      SCALITY_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY required}
+    ports:
+      - "${MINIO_API_PORT:-9000}:8000"
+    volumes:
+      - minio_data:/usr/src/app/localData
+    networks:
+      - backend
+    healthcheck:
+      # CloudServer responde 403 no GET / sem credenciais — conta como up
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://127.0.0.1:8000/',(r)=>{r.resume();process.exit(r.statusCode?0:1)}).on('error',()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: sad-ila-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-sadila}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:?RABBITMQ_DEFAULT_PASS required}
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  ollama:
+    profiles: ["ai"]
+    image: ollama/ollama:0.5.4
+    container_name: sad-ila-ollama
+    ports:
+      - "${OLLAMA_PORT:-11434}:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - backend
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: infrastructure/dockerfiles/api.Dockerfile
+      target: dev
+    container_name: sad-ila-api
+    env_file:
+      - ../.env
+    environment:
+      API_PORT: 3001
+      NODE_ENV: development
+      DATA_MIGRATIONS_DIR: /migrations
+      DATABASE_URL: ${DATABASE_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:8000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET:-sadila-documents}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_PROVIDER_BASE_URL: ${AI_PROVIDER_BASE_URL:-http://ollama:11434}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "${API_PORT:-3001}:3001"
+    volumes:
+      - ../apps/api:/app
+      - ../data/migrations:/migrations:ro
+      - api_node_modules:/app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: ../../infrastructure/dockerfiles/web.Dockerfile
+      target: dev
+    container_name: sad-ila-web
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api/v1}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - ../apps/web:/app
+      - web_node_modules:/app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: unless-stopped
+
+networks:
+  backend:
+    name: sad-ila-backend
+
+volumes:
+  postgres_data:
+  minio_data:
+  rabbitmq_data:
+  ollama_data:
+  api_node_modules:
+  web_node_modules:

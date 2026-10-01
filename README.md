@@ -322,6 +322,45 @@ Cria documentação inline (DocStrings, comentários) e externa (README, API doc
 ### QA Testing (`qa-testing`)
 Cria estratégia de testes, casos de teste, e valida qualidade.
 
+## SAD-ILA — execução local (Docker)
+
+Pré-requisitos: Docker Desktop, arquivo `.env` na raiz (`cp .env.example .env`).
+
+```powershell
+docker compose up -d --build
+```
+
+| Serviço | Porta (host) |
+|---------|----------------|
+| Web (Next.js) | 3000 |
+| API (NestJS) | 3001 |
+| PostgreSQL | 5432 |
+| MinIO / S3 dev | 9000 |
+| RabbitMQ AMQP / UI | 5672 / 15672 |
+
+Health (fora de `/api/v1`):
+
+```powershell
+curl.exe http://localhost:3001/health
+curl.exe http://localhost:3001/ready
+```
+
+Comandos npm **dentro** do contêiner da API:
+
+```powershell
+docker compose exec api npm run build
+docker compose exec api npm run migrate:data
+```
+
+Logs: `docker compose logs -f api web`
+
+Web: `NEXT_PUBLIC_API_URL` no `.env` deve incluir `/api/v1` (ex.: `http://localhost:3001/api/v1`). Ver `apps/web/.env.example`.
+
+Smoke test (stack no ar): `cd testing && npm install && npm run test:smoke-compose`  
+Suíte US-002 completa e relatório incremental: `testing/test-results.md`
+
+Detalhes: `infrastructure/README.md`. Implementação US-002: [`docs/implementation/US-002-ambiente-docker-health.md`](docs/implementation/US-002-ambiente-docker-health.md).
+
 ## Documentação Adicional
 
 - Cada skill possui referências em `references/` com templates e guias

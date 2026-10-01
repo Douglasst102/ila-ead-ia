@@ -1,0 +1,137 @@
+# Produção / piloto — builds otimizados (sem bind mounts)
+#   docker compose -f infrastructure/docker-compose.prod.yml --env-file .env up -d --build
+
+name: sad-ila-prod
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  minio:
+    image: zenko/cloudserver:latest
+    environment:
+      SCALITY_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY}
+      SCALITY_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY}
+    # Sem publish de portas — apenas rede interna (RFN-006 / ADR-005)
+    volumes:
+      - minio_data:/usr/src/app/localData
+    networks:
+      - backend
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"require('http').get('http://127.0.0.1:8000/',(r)=>{r.resume();process.exit(r.statusCode?0:1)}).on('error',()=>process.exit(1))\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: always
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+  ollama:
+    profiles: ["ai"]
+    image: ollama/ollama:0.5.4
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - backend
+    restart: always
+
+  api:
+    build:
+      context: ..
+      dockerfile: infrastructure/dockerfiles/api.Dockerfile
+      target: runner
+    env_file:
+      - ../.env
+    environment:
+      API_PORT: 3001
+      NODE_ENV: production
+      DATA_MIGRATIONS_DIR: /app/data/migrations
+      DATABASE_URL: ${DATABASE_URL}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio:8000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET:-sadila-documents}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    ports:
+      - "${API_PORT:-3001}:3001"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: always
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: ../../infrastructure/dockerfiles/web.Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    env_file:
+      - ../.env
+    environment:
+      NODE_ENV: production
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: always
+
+networks:
+  backend:
+    name: sad-ila-prod-backend
+
+volumes:
+  postgres_data:
+  minio_data:
+  rabbitmq_data:
+  ollama_data:

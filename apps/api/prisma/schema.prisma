@@ -1,0 +1,27 @@
+// SAD-ILA — ORM bootstrap (US-002). Modelos completos em US posteriores.
+// DDL canônico: data/migrations/ e technical/data-models/schema.sql
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Espelho mínimo de auth_users para conexão ORM e evolução incremental.
+model AuthUser {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email          String   @unique @db.VarChar(320)
+  nome           String   @db.VarChar(200)
+  passwordHash   String   @map("password_hash") @db.VarChar(128)
+  passwordSalt   String   @map("password_salt") @db.VarChar(64)
+  hashAlgorithm  String   @default("sha256_v1") @map("hash_algorithm") @db.VarChar(32)
+  roles          String[]
+  ativo          Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("auth_users")
+}

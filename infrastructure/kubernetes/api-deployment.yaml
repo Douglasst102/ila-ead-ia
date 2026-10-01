@@ -1,0 +1,52 @@
+# Stub — substituir imagens/tags e secrets antes de aplicar em cluster COMGAP.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sad-ila-api
+  namespace: sad-ila
+  labels:
+    app: sad-ila-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sad-ila-api
+  template:
+    metadata:
+      labels:
+        app: sad-ila-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/example/sad-ila-api:latest
+          ports:
+            - containerPort: 3001
+          envFrom:
+            - secretRef:
+                name: sad-ila-api-env
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sad-ila-api
+  namespace: sad-ila
+spec:
+  selector:
+    app: sad-ila-api
+  ports:
+    - port: 3001
+      targetPort: 3001
+  type: ClusterIP

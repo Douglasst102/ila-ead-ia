@@ -13,69 +13,158 @@
       "completedAt": "2026-10-01T11:30:00-03:00"
     },
     "processes": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "complete",
+      "artifacts": {
+        "process-map": "processes/process-map.md",
+        "critical-processes-matrix": "processes/critical-processes-matrix.md",
+        "improvement-opportunities": "processes/improvement-opportunities.md",
+        "process-diagrams": "processes/process-diagrams/README.md"
+      },
+      "completedAt": "2026-10-01T12:00:00-03:00"
     },
     "requirements": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "complete",
+      "artifacts": {
+        "srs": "requirements/srs.md",
+        "functional-requirements": "requirements/functional-requirements.md",
+        "non-functional-requirements": "requirements/non-functional-requirements.md",
+        "requirements-traceability-matrix": "requirements/requirements-traceability-matrix.md",
+        "prioritized-backlog": "requirements/prioritized-backlog.md",
+        "user-stories-ready-for-dev": "requirements/user-stories-ready-for-dev.md"
+      },
+      "completedAt": "2026-10-01T13:00:00-03:00"
     },
     "architecture": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "complete",
+      "artifacts": {
+        "architecture-document": "architecture/architecture-document.md",
+        "technology-stack": "architecture/technology-stack.md",
+        "api-specification": "architecture/api-specification.md",
+        "c4-diagrams": "architecture/c4-diagrams/README.md",
+        "adrs": "architecture/adrs/README.md"
+      },
+      "completedAt": "2026-10-01T13:00:00-03:00"
     },
     "technical": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "complete",
+      "artifacts": {
+        "technical-specifications": "technical/technical-specifications.md",
+        "api-contracts": "technical/api-contracts/openapi.yaml",
+        "data-models-erd": "technical/data-models/erd.md",
+        "data-models-schema": "technical/data-models/schema.sql",
+        "technical-use-cases": "technical/technical-use-cases.md",
+        "integration-specs": "technical/integration-specs.md"
+      },
+      "completedAt": "2026-10-01T14:00:00-03:00"
     },
     "infrastructure": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "complete",
+      "artifacts": {
+        "analysis": "infrastructure/analysis.md",
+        "readme": "infrastructure/README.md",
+        "docker-compose-dev": "infrastructure/docker-compose.dev.yml",
+        "docker-compose-prod": "infrastructure/docker-compose.prod.yml",
+        "dockerfiles": "infrastructure/dockerfiles/",
+        "env-example": ".env.example",
+        "ci-cd": "infrastructure/ci-cd/README.md",
+        "kubernetes": "infrastructure/kubernetes/",
+        "apps-web": "apps/web",
+        "apps-api": "apps/api"
+      },
+      "completedAt": "2026-10-01T15:00:00-03:00"
     },
     "data": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "in_progress",
+      "artifacts": {
+        "modelo-dados": "data/modelo-dados.md",
+        "escopo-dados": "data/escopo-dados.md",
+        "migrations": "data/migrations/",
+        "readme": "data/README.md"
+      },
+      "completedAt": null,
+      "notes": "US-002: schema_migrations + hook entrypoint API"
     },
     "design": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "complete",
+      "artifacts": {
+        "information-architecture": "design/information-architecture.md",
+        "design-analysis": "design/design-analysis.md",
+        "design-system": "design/design-system.md",
+        "component-specs": "design/component-specs.md",
+        "frontend-pages-inventory": "design/frontend-pages-inventory.md",
+        "accessibility-notes": "design/accessibility-notes.md",
+        "wireframes": "design/wireframes/README.md",
+        "mockups": "design/mockups/README.md",
+        "interface-design-system": "design/.interface-design/system.md"
+      },
+      "completedAt": "2026-10-01T16:00:00-03:00"
     },
     "frontend": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "in_progress",
+      "artifacts": {
+        "apps-web": "apps/web",
+        "apps-readme": "apps/README.md",
+        "us-002-doc": "docs/implementation/US-002-ambiente-docker-health.md"
+      },
+      "completedAt": null,
+      "notes": "US-002 entregue (Docker, api-config); demais US pendentes"
     },
     "backend": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "in_progress",
+      "artifacts": {
+        "apps-api": "apps/api",
+        "http-api-health": "apps/api/src/http-api/",
+        "prisma": "apps/api/prisma/",
+        "us-002-doc": "docs/implementation/US-002-ambiente-docker-health.md"
+      },
+      "completedAt": null,
+      "notes": "US-002 entregue (health, Prisma bootstrap, migrações); Auth US-001 pendente"
     },
     "code-review": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "complete",
+      "artifacts": {
+        "us-002-run": "revision/2026-10-01-1025/",
+        "correcoes": "revision/2026-10-01-1025/CORRECOES-APLICADAS.md"
+      },
+      "completedAt": "2026-10-01T10:30:00-03:00",
+      "notes": "Revisão US-002; próximas US revisar incrementalmente"
     },
     "security": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "in_progress",
+      "artifacts": {
+        "us-002-appsec": "security/revisao-us-002-appsec.md"
+      },
+      "completedAt": null,
+      "notes": "Hardening US-002 aplicado; auditoria contínua por US"
     },
     "testing": {
-      "status": "pending",
-      "artifacts": {},
-      "completedAt": null
+      "status": "in_progress",
+      "artifacts": {
+        "strategy": "testing/test-strategy.md",
+        "test-cases": "testing/test-cases.md",
+        "test-results": "testing/test-results.md",
+        "test-coverage": "testing/test-coverage.md"
+      },
+      "completedAt": null,
+      "notes": "US-002: 13 testes Jest; suíte cumulativa iniciada"
+    }
+  },
+  "delivery": {
+    "userStories": {
+      "US-002": {
+        "title": "Ambiente Docker e health checks",
+        "status": "done",
+        "completedAt": "2026-10-01T10:47:00-03:00",
+        "documentation": "docs/implementation/US-002-ambiente-docker-health.md",
+        "testsTotal": 13,
+        "testsPassed": 13,
+        "references": ["RFN-020", "G-13"]
+      }
     }
   },
   "metadata": {
     "createdAt": "2026-10-01T11:30:00-03:00",
-    "lastModified": "2026-10-01T11:30:00-03:00",
+    "lastModified": "2026-10-01T10:47:00-03:00",
     "sources": [
       "others_artifacts/visao-inicial.txt",
       "others_artifacts/ila-missao-visao-valores.txt",
@@ -83,11 +172,13 @@
       "TODOs.md"
     ],
     "openGaps": [
-      "Autenticação institucional (SSO vs. local)",
-      "Provedor e política de dados para IA",
-      "Classificação de sigilo dos materiais",
-      "Processo as-is formal e baseline de métricas",
-      "Pasta legacy/ inexistente"
+      "SSO COMAER (F4) — v1 adota cadastro local + JWT (ADR-006); V-04 permanece aberta",
+      "Provedor e política de dados para IA (G-09) — Facade + Ollama piloto e flag AI_ENABLED (ADR-008); produção com material real bloqueada",
+      "Classificação de sigilo dos materiais (V-02)",
+      "Processo as-is formal e baseline de métricas (G-10 / M-01)",
+      "Pasta legacy/ inexistente",
+      "RACI formal e homologação superior ao revisor — proposta em improvement-opportunities.md",
+      "Hash SHA256 de senha — dívida deliberada para Argon2/bcrypt antes de produção institucional (ADR-007)"
     ]
   }
 }

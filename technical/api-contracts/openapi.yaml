@@ -1,0 +1,1479 @@
+openapi: 3.0.3
+info:
+  title: SAD-ILA API (BFF)
+  description: |
+    API REST do monólito modular NestJS — única superfície consumida pelo WebApp Next.js.
+    Documentação pública em runtime: `/api/docs` (Swagger UI) e `/api/docs-json`.
+    Base path versionado: `/api/v1`. Breaking changes → `/api/v2`.
+
+    **Rastreio:** RF-001–091, RFN-006, RFN-040, RFN-041, US-001–041.
+    **BFF/Facade:** operações como confirmar preparação agregam PostgreSQL, MinIO, RabbitMQ e auditoria.
+    **IA:** frontend nunca chama provedor; jobs assíncronos com polling.
+  version: 1.0.0
+  contact:
+    name: ILA/COMGAP — Projeto 26SISIAR05LOG
+
+servers:
+  - url: http://localhost:4000/api/v1
+    description: Desenvolvimento (Docker Compose — ApiBff)
+  - url: https://{host}/api/v1
+    description: Piloto/produção COMGAP
+    variables:
+      host:
+        default: sad-ila.example.mil.br
+
+tags:
+  - name: Health
+    description: Liveness/readiness (fora do prefixo /api/v1 na implementação)
+  - name: Auth
+    description: RF-001–004
+  - name: Usuarios
+    description: RF-005 — admin_sistema
+  - name: Cursos
+    description: RF-010–012
+  - name: Materiais
+    description: RF-020–021
+  - name: Processos
+    description: RF-022, RF-030–035
+  - name: Jobs
+    description: RF-040, RFN-011, ADR-009
+  - name: Sugestoes
+    description: RF-042–044 HITL
+  - name: QE
+    description: RF-050–053
+  - name: Relatorios
+    description: RF-060–063
+  - name: Exportacoes
+    description: RF-061–062 downloads
+  - name: Historico
+    description: RF-070–071
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Liveness
+      description: US-002. Implementação típica em `GET /health` (raiz ApiBff, sem /api/v1).
+      security: []
+      responses:
+        '200':
+          description: Processo ativo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness
+      description: Postgres Must; MinIO/RabbitMQ Should (503 se indisponíveis).
+      security: []
+      responses:
+        '200':
+          description: Dependências críticas OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyStatus'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login e-mail/senha
+      description: RF-001. Resposta 401 genérica para credenciais inválidas.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: revisor@ila.exemplo.br
+              senha: "***"
+      responses:
+        '200':
+          description: JWT emitido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Credenciais inválidas
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: AUTH_INVALID_CREDENTIALS
+                message: Credenciais inválidas
+                correlationId: 550e8400-e29b-41d4-a716-446655440000
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout
+      description: RF-004. Denylist server-side Should (token revogado até exp).
+      responses:
+        '204':
+          description: Sessão encerrada
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Usuário corrente
+      responses:
+        '200':
+          description: Perfil e papéis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /usuarios:
+    get:
+      tags: [Usuarios]
+      summary: Listar usuários
+      description: RBAC admin_sistema. Paginação RFN-010.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUsers'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Usuarios]
+      summary: Criar usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioCreate'
+      responses:
+        '201':
+          description: Criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: E-mail duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /usuarios/{id}:
+    parameters:
+      - $ref: '#/components/parameters/UuidPath'
+    get:
+      tags: [Usuarios]
+      summary: Detalhe usuário
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Usuarios]
+      summary: Atualizar usuário
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsuarioPatch'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cursos:
+    get:
+      tags: [Cursos]
+      summary: Listar cursos
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCursos'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Cursos]
+      summary: Cadastrar curso
+      description: RF-011. admin_cursos ou admin_sistema.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CursoCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Curso'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Título duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: CURSO_TITULO_DUPLICADO
+                message: Já existe curso com este título
+                correlationId: 550e8400-e29b-41d4-a716-446655440001
+
+  /cursos/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Cursos]
+      summary: Hub do curso
+      description: RF-012. Curso + resumo materiais/processos.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursoHub'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Cursos]
+      summary: Editar curso
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CursoPatch'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Curso'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Título duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /cursos/{cursoId}/materiais:
+    parameters:
+      - $ref: '#/components/parameters/CursoId'
+    get:
+      tags: [Materiais]
+      summary: Listar materiais de apoio
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MaterialApoio'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [Materiais]
+      summary: Upload material de apoio
+      description: |
+        RF-020. multipart/form-data. Limite MAX_UPLOAD_MB (default 50).
+        RBAC: revisor, admin_cursos, admin_sistema (decisão técnica piloto).
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [arquivo]
+              properties:
+                arquivo:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialApoio'
+        '413':
+          description: Arquivo acima do limite
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /cursos/{cursoId}/materiais/{id}:
+    parameters:
+      - $ref: '#/components/parameters/CursoId'
+      - $ref: '#/components/parameters/UuidPath'
+    get:
+      tags: [Materiais]
+      summary: Metadados material
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaterialApoio'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /cursos/{cursoId}/materiais/{id}/download:
+    parameters:
+      - $ref: '#/components/parameters/CursoId'
+      - $ref: '#/components/parameters/UuidPath'
+    get:
+      tags: [Materiais]
+      summary: Download material
+      description: Stream autenticado via BFF (sem URL MinIO pública).
+      responses:
+        '200':
+          description: Arquivo binário
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /processos:
+    get:
+      tags: [Historico]
+      summary: Listar processos
+      description: RF-071. Filtros cursoId, estado.
+      parameters:
+        - name: cursoId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: estado
+          in: query
+          schema:
+            $ref: '#/components/schemas/ProcessoEstado'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProcessos'
+    post:
+      tags: [Processos]
+      summary: Iniciar processo de revisão
+      description: |
+        RF-022. Idempotency-Key (Should RFN-041) — mesma chave + usuário retorna processo existente.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessoCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessoDetalhe'
+        '409':
+          description: Idempotency replay ou conflito
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /processos/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    get:
+      tags: [Processos]
+      summary: Detalhe processo
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessoDetalhe'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /processos/{id}/preparacao:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    patch:
+      tags: [Processos]
+      summary: Atualizar wizard preparação
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreparacaoPatch'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessoDetalhe'
+        '409':
+          description: Estado não permite edição
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /processos/{id}/arquivos:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    post:
+      tags: [Processos]
+      summary: Upload arquivo do processo
+      description: RF-031–032. tipo qe | material | referencia.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [arquivo, tipo]
+              properties:
+                arquivo:
+                  type: string
+                  format: binary
+                tipo:
+                  $ref: '#/components/schemas/ArquivoProcessoTipo'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArquivoProcesso'
+        '413':
+          description: Upload too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /processos/{id}/preparacao/confirmar:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    post:
+      tags: [Processos]
+      summary: Confirmar preparação (Facade)
+      description: |
+        RF-035. Valida RF-034 (cienteLimitacao). Pode enfileirar job IA → 202.
+        Transação ACID + auditoria + AMQP quando AI_ENABLED.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmarPreparacaoRequest'
+      responses:
+        '200':
+          description: Preparação concluída sem job IA
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessoDetalhe'
+        '202':
+          description: Job IA enfileirado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAccepted'
+        '422':
+          description: RB-02 ou validação negócio
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '409':
+          description: Transição estado inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /processos/{id}/sugestoes:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    get:
+      tags: [Sugestoes]
+      summary: Listar sugestões persistidas
+      description: RF-040. Não invoca provedor IA.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Sugestao'
+
+  /processos/{id}/ia/retry:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    post:
+      tags: [Jobs]
+      summary: Retry job IA
+      description: RF-091. 403/422 se AI_ENABLED=false (G-09).
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAccepted'
+        '422':
+          description: IA desabilitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: AI_DISABLED
+                message: Integração de IA desabilitada pela política institucional
+                correlationId: 550e8400-e29b-41d4-a716-446655440002
+
+  /processos/{id}/etapas/qe:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    post:
+      tags: [Sugestoes]
+      summary: Avançar para conferência QE
+      description: RF-044. 422 se sugestões pendentes.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessoDetalhe'
+        '422':
+          description: Sugestões pendentes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                code: SUGESTOES_PENDENTES
+                message: Existem sugestões de IA sem decisão
+                correlationId: 550e8400-e29b-41d4-a716-446655440003
+
+  /processos/{id}/qe/matriz:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    get:
+      tags: [QE]
+      summary: Matriz QE
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QeMatriz'
+
+  /processos/{id}/qe/itens/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    patch:
+      tags: [QE]
+      summary: Atualizar item QE
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QeItemPatch'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QeItem'
+
+  /processos/{id}/qe/concluir:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    post:
+      tags: [QE]
+      summary: Concluir conferência QE
+      description: RF-053. Estado → relatorio.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessoDetalhe'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+
+  /processos/{id}/relatorio:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    get:
+      tags: [Relatorios]
+      summary: Relatório consolidado JSON
+      description: RF-060.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RelatorioConsolidado'
+
+  /processos/{id}/exportacoes/docx:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    post:
+      tags: [Relatorios]
+      summary: Export material revisado docx
+      description: RF-061. Job assíncrono; aplica somente sugestões aceitas (RFN-060).
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportacaoAccepted'
+
+  /processos/{id}/exportacoes/pdf:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    post:
+      tags: [Relatorios]
+      summary: Export relatório PDF
+      description: RF-062 Should.
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportacaoAccepted'
+
+  /processos/{id}/encerrar:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    post:
+      tags: [Relatorios]
+      summary: Encerrar processo
+      description: RF-063. Terminal concluido.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProcessoDetalhe'
+        '409':
+          description: Já encerrado ou estado inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /processos/{id}/eventos:
+    parameters:
+      - $ref: '#/components/parameters/ProcessoId'
+    get:
+      tags: [Historico]
+      summary: Trilha de auditoria do processo
+      description: RF-070 append-only.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventosAuditoria'
+
+  /jobs/{jobId}:
+    parameters:
+      - name: jobId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Jobs]
+      summary: Status do job
+      description: Polling após 202. RFN-011.
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sugestoes/{id}/decisao:
+    parameters:
+      - $ref: '#/components/parameters/UuidPath'
+    post:
+      tags: [Sugestoes]
+      summary: Decisão HITL aceitar/rejeitar
+      description: RF-042. Idempotente para mesmo par (sugestaoId, decisao).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SugestaoDecisaoRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sugestao'
+        '409':
+          description: Sugestão já decidida com decisão diferente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /sugestoes/{id}/especialista:
+    parameters:
+      - $ref: '#/components/parameters/UuidPath'
+    patch:
+      tags: [Sugestoes]
+      summary: Flag validar especialista
+      description: RF-043.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SugestaoEspecialistaPatch'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Sugestao'
+
+  /exportacoes/{id}/download:
+    parameters:
+      - $ref: '#/components/parameters/UuidPath'
+    get:
+      tags: [Exportacoes]
+      summary: Download exportação gerada
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: RFN-002. Claims sub, email, roles, iat, exp.
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 50
+        default: 20
+    UuidPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CursoId:
+      name: cursoId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProcessoId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      description: UUID recomendado; deduplica POST /processos por usuário (24h).
+      schema:
+        type: string
+        maxLength: 128
+
+  responses:
+    BadRequest:
+      description: Validação
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Token ausente/expirado/revogado
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: RBAC
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Recurso inexistente ou não visível
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UnprocessableEntity:
+      description: Regra de negócio
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServiceUnavailable:
+      description: Dependência crítica indisponível
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message, correlationId]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        correlationId:
+          type: string
+          format: uuid
+
+    PaginationMeta:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalItems:
+          type: integer
+        totalPages:
+          type: integer
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+
+    ReadyStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ready
+        checks:
+          type: object
+          additionalProperties:
+            type: boolean
+
+    LoginRequest:
+      type: object
+      required: [email, senha]
+      properties:
+        email:
+          type: string
+          format: email
+        senha:
+          type: string
+          format: password
+          minLength: 8
+
+    LoginResponse:
+      type: object
+      required: [accessToken, expiresAt, user]
+      properties:
+        accessToken:
+          type: string
+          description: JWT Bearer (não incluir em logs)
+        expiresAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/User'
+
+    UserRole:
+      type: string
+      enum: [revisor, admin_cursos, admin_sistema]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        nome:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+        ativo:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UsuarioCreate:
+      type: object
+      required: [email, nome, roles, senhaInicial]
+      properties:
+        email:
+          type: string
+          format: email
+        nome:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+        senhaInicial:
+          type: string
+          format: password
+
+    UsuarioPatch:
+      type: object
+      properties:
+        nome:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+        ativo:
+          type: boolean
+
+    PaginatedUsers:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    Curso:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        titulo:
+          type: string
+        descricao:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CursoCreate:
+      type: object
+      required: [titulo]
+      properties:
+        titulo:
+          type: string
+          maxLength: 300
+        descricao:
+          type: string
+
+    CursoPatch:
+      type: object
+      properties:
+        titulo:
+          type: string
+        descricao:
+          type: string
+
+    CursoHub:
+      allOf:
+        - $ref: '#/components/schemas/Curso'
+        - type: object
+          properties:
+            resumoMateriais:
+              type: integer
+            resumoProcessos:
+              type: integer
+
+    PaginatedCursos:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Curso'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    MaterialApoio:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        cursoId:
+          type: string
+          format: uuid
+        nomeOriginal:
+          type: string
+        tamanho:
+          type: integer
+          format: int64
+        mime:
+          type: string
+        autorId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+
+    ProcessoEstado:
+      type: string
+      enum:
+        - rascunho
+        - preparacao_concluida
+        - revisao_ia
+        - qe
+        - relatorio
+        - concluido
+
+    CriterioCodigo:
+      type: string
+      enum:
+        - coerencia_coesao
+        - linguagem_dialogica
+        - ortografia_gramatica
+        - consistencia_terminologica
+        - subordinacao_hierarquica
+        - conferencia_qe
+        - revisao_tecnica_normativa
+
+    ProcessoCreate:
+      type: object
+      required: [cursoId]
+      properties:
+        cursoId:
+          type: string
+          format: uuid
+        materialApoioId:
+          type: string
+          format: uuid
+
+    PreparacaoPatch:
+      type: object
+      properties:
+        cursoId:
+          type: string
+          format: uuid
+        criterios:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriterioCodigo'
+          minItems: 1
+
+    ConfirmarPreparacaoRequest:
+      type: object
+      properties:
+        cienteLimitacao:
+          type: boolean
+          description: Obrigatório true quando revisao_tecnica_normativa sem referências (RF-034).
+
+    ArquivoProcessoTipo:
+      type: string
+      enum: [qe, material, referencia]
+
+    ArquivoProcesso:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        processoId:
+          type: string
+          format: uuid
+        tipo:
+          $ref: '#/components/schemas/ArquivoProcessoTipo'
+        nomeOriginal:
+          type: string
+        mime:
+          type: string
+        tamanho:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ProcessoDetalhe:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        cursoId:
+          type: string
+          format: uuid
+        materialApoioId:
+          type: string
+          format: uuid
+        estado:
+          $ref: '#/components/schemas/ProcessoEstado'
+        criterios:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriterioCodigo'
+        arquivos:
+          type: array
+          items:
+            $ref: '#/components/schemas/ArquivoProcesso'
+        responsavelId:
+          type: string
+          format: uuid
+        preparacaoConfirmadaEm:
+          type: string
+          format: date-time
+        encerradoEm:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    PaginatedProcessos:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProcessoDetalhe'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    JobEstado:
+      type: string
+      enum: [queued, running, succeeded, failed]
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        processoId:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+          enum: [revisao_ia, export_docx, export_pdf]
+        estado:
+          $ref: '#/components/schemas/JobEstado'
+        errorCode:
+          type: string
+        errorMessage:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+
+    JobAccepted:
+      type: object
+      required: [jobId, statusUrl]
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        statusUrl:
+          type: string
+          example: /api/v1/jobs/550e8400-e29b-41d4-a716-446655440010
+        processo:
+          $ref: '#/components/schemas/ProcessoDetalhe'
+
+    SugestaoEstado:
+      type: string
+      enum: [pendente, aceita, rejeitada]
+
+    SugestaoCategoria:
+      type: string
+      enum:
+        - melhoria
+        - correcao_necessaria
+        - ajuste_hierarquia
+        - validar_especialista
+
+    Sugestao:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        processoId:
+          type: string
+          format: uuid
+        categoria:
+          $ref: '#/components/schemas/SugestaoCategoria'
+        estado:
+          $ref: '#/components/schemas/SugestaoEstado'
+        trechoReferencia:
+          type: string
+        trechoOffset:
+          type: integer
+        trechoLength:
+          type: integer
+        textoSugerido:
+          type: string
+        justificativa:
+          type: string
+        validarEspecialista:
+          type: boolean
+        notaEncaminhamento:
+          type: string
+        decididoEm:
+          type: string
+          format: date-time
+
+    SugestaoDecisaoRequest:
+      type: object
+      required: [decisao]
+      properties:
+        decisao:
+          type: string
+          enum: [aceita, rejeitada]
+        comentario:
+          type: string
+
+    SugestaoEspecialistaPatch:
+      type: object
+      properties:
+        validarEspecialista:
+          type: boolean
+        notaEncaminhamento:
+          type: string
+
+    QeStatusCobertura:
+      type: string
+      enum: [contemplado, cobertura_parcial, nao_localizado]
+
+    QeItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codigoHierarquia:
+          type: string
+        tituloItem:
+          type: string
+        statusCobertura:
+          $ref: '#/components/schemas/QeStatusCobertura'
+        localizacaoMaterial:
+          type: string
+        divergencias:
+          type: string
+        observacoes:
+          type: string
+        ordem:
+          type: integer
+
+    QeItemPatch:
+      type: object
+      properties:
+        statusCobertura:
+          $ref: '#/components/schemas/QeStatusCobertura'
+        localizacaoMaterial:
+          type: string
+        divergencias:
+          type: string
+        observacoes:
+          type: string
+
+    QeMatriz:
+      type: object
+      properties:
+        processoId:
+          type: string
+          format: uuid
+        itens:
+          type: array
+          items:
+            $ref: '#/components/schemas/QeItem'
+
+    RelatorioConsolidado:
+      type: object
+      description: Agregado RF-060 para UI
+      properties:
+        processoId:
+          type: string
+          format: uuid
+        resumoSugestoes:
+          type: object
+          properties:
+            aceitas:
+              type: integer
+            rejeitadas:
+              type: integer
+            pendentes:
+              type: integer
+        resumoQe:
+          type: object
+        criteriosAplicados:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriterioCodigo'
+
+    ExportacaoAccepted:
+      type: object
+      properties:
+        exportacaoId:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        statusUrl:
+          type: string
+
+    EventoAuditoria:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        processoId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        tipo:
+          type: string
+        payload:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    PaginatedEventosAuditoria:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventoAuditoria'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+security:
+  - bearerAuth: []

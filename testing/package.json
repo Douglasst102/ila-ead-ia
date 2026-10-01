@@ -1,0 +1,17 @@
+{
+  "name": "@sad-ila/testing",
+  "private": true,
+  "description": "Suíte de testes SAD-ILA (unit + integração)",
+  "scripts": {
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.js",
+    "test:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.js unit/",
+    "test:integration": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.js integration/",
+    "test:smoke-compose": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config jest.config.js integration/us-002-ac01-health.spec.ts integration/us-002-web-smoke.spec.ts"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.2"
+  }
+}

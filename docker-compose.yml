@@ -1,0 +1,5 @@
+# SAD-ILA — stack de desenvolvimento (US-002)
+# Uso: cp .env.example .env && docker compose up -d --build
+
+include:
+  - path: infrastructure/docker-compose.dev.yml
